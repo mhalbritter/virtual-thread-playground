@@ -1,16 +1,17 @@
 package org.example;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 class CooperativeScheduling {
 	public static void main(String[] args) throws InterruptedException {
 		System.setProperty("jdk.virtualThreadScheduler.parallelism", "1");
 		System.setProperty("jdk.virtualThreadScheduler.maxPoolSize", "1");
 		// System.setProperty("jdk.virtualThreadScheduler.minRunnable", "0");
-		List<Log> logs = new CopyOnWriteArrayList<>();
+		List<Log> logs = Collections.synchronizedList(new ArrayList<>());
 		for (int i = 0; i < 10; i++) {
 			int finalI = i;
 			Thread.ofVirtual().start(() -> threadMain(logs, finalI));
