@@ -46,7 +46,7 @@ class VirtualThreadAssert extends AbstractAssert<VirtualThreadAssert, ThrowingRu
 		if (!events.isEmpty()) {
 			StringBuilder details = new StringBuilder();
 			for (RecordedEvent event : events) {
-				details.append("Thread %s pinned for %s ms%n".formatted(event.getThread().getJavaName(), event.getDuration().toMillis()));
+				details.append("Thread '%s' pinned for %d ms%n".formatted(event.getThread().getJavaName(), event.getDuration().toMillis()));
 				details.append("details = ").append(event).append("\n");
 			}
 			failWithMessage("Expected no pinning to happen, but found pinning:%n%s", details);
