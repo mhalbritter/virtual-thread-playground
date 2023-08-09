@@ -1,16 +1,10 @@
 package org.example;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.text.ParseException;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
-import jdk.jfr.Configuration;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingStream;
 import org.assertj.core.api.AbstractAssert;
@@ -19,12 +13,8 @@ import org.example.VirtualThreadAssert.ThrowingRunnable;
 /**
  * @author Moritz Halbritter
  */
-class VirtualThreadAssert extends AbstractAssert<VirtualThreadAssert, ThrowingRunnable> {
-	private static final Object configurationLock = new Object();
-
-	private static Configuration configuration;
-
-	protected VirtualThreadAssert(ThrowingRunnable runnable) {
+final class VirtualThreadAssert extends AbstractAssert<VirtualThreadAssert, ThrowingRunnable> {
+	private VirtualThreadAssert(ThrowingRunnable runnable) {
 		super(runnable, VirtualThreadAssert.class);
 	}
 
@@ -34,9 +24,13 @@ class VirtualThreadAssert extends AbstractAssert<VirtualThreadAssert, ThrowingRu
 
 	void doesNotPin() throws Exception {
 		isNotNull();
-		Configuration configuration = getOrCreateJfrConfiguration();
 		Queue<RecordedEvent> events = new ConcurrentLinkedQueue<>();
-		try (RecordingStream rs = new RecordingStream(configuration)) {
+		try (RecordingStream rs = new RecordingStream()) {
+			rs.setSettings(Map.of(
+					"jdk.VirtualThreadPinned#enabled", "true",
+					"jdk.VirtualThreadPinned#stackTrace", "true",
+					"jdk.VirtualThreadPinned#threshold", "0 ms"
+			));
 			rs.setReuse(false);
 			// See https://openjdk.org/jeps/425#JDK-Flight-Recorder-JFR
 			rs.onEvent("jdk.VirtualThreadPinned", events::add);
@@ -74,23 +68,6 @@ class VirtualThreadAssert extends AbstractAssert<VirtualThreadAssert, ThrowingRu
 			failWithMessage("Got interrupted while waiting for virtual thread");
 		}
 		throw new AssertionError("Unreachable");
-	}
-
-	private static Configuration getOrCreateJfrConfiguration() {
-		synchronized (configurationLock) {
-			if (configuration == null) {
-				try (Reader reader = new InputStreamReader(VirtualThreadAssert.class.getResourceAsStream("/virtual-thread-pinning.jfc"), StandardCharsets.UTF_8)) {
-					configuration = Configuration.create(reader);
-				}
-				catch (ParseException ex) {
-					throw new IllegalStateException("Failed to parse config", ex);
-				}
-				catch (IOException ex) {
-					throw new UncheckedIOException(ex);
-				}
-			}
-			return configuration;
-		}
 	}
 
 	@FunctionalInterface
