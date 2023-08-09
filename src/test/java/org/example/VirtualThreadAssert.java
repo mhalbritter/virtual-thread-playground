@@ -58,8 +58,8 @@ class VirtualThreadAssert extends AbstractAssert<VirtualThreadAssert, ThrowingRu
 	}
 
 	private Exception startVirtualThread(ThrowingRunnable runnable) {
-		AtomicReference<Exception> thrown = new AtomicReference<>();
 		try {
+			AtomicReference<Exception> thrown = new AtomicReference<>();
 			Thread.ofVirtual().name("test-subject").start(() -> {
 				try {
 					runnable.run();
@@ -68,11 +68,11 @@ class VirtualThreadAssert extends AbstractAssert<VirtualThreadAssert, ThrowingRu
 					thrown.set(ex);
 				}
 			}).join();
+			return thrown.get();
 		}
 		catch (InterruptedException ex) {
 			failWithMessage("Got interrupted while waiting for virtual thread");
 		}
-		return thrown.get();
 	}
 
 	private static Configuration getOrCreateJfrConfiguration() {
