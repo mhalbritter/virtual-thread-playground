@@ -13,43 +13,47 @@ import static org.example.VirtualThreadAssert.assertThatCode;
 class SomeTest {
 	@Test
 	void pin() throws Exception {
-		assertThatCode(SomeTest::pinning).doesNotPin();
+		assertThatCode(this::pinning).doesNotPin();
 	}
 
 	@Test
 	void doesNotPin() throws Exception {
-		assertThatCode(SomeTest::noPinning).doesNotPin();
+		assertThatCode(this::noPinning).doesNotPin();
 	}
 
-	private static void noPinning() throws InterruptedException {
+	@Test
+	void exceptionIsRethrown() throws Exception {
+		assertThatCode(this::throwsException).doesNotPin();
+	}
+
+	private void throwsException() {
+		throw new RuntimeException("Boom");
+	}
+
+	private void noPinning() {
 		Lock lock = new ReentrantLock();
-		Thread.ofVirtual().name("vt-0").start(() -> {
-					lock.lock();
-					try {
-						Thread.sleep(1);
-					}
-					catch (InterruptedException e) {
-						Thread.currentThread().interrupt();
-					}
-					finally {
-						lock.unlock();
-					}
-				}
-		).join();
+		lock.lock();
+		try {
+			Thread.sleep(1);
+		}
+		catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+		finally {
+			lock.unlock();
+		}
+
 	}
 
-	private static void pinning() throws InterruptedException {
+	private void pinning() {
 		Object monitor = new Object();
-		Thread.ofVirtual().name("vt-0").start(() -> {
-					synchronized (monitor) {
-						try {
-							Thread.sleep(1);
-						}
-						catch (InterruptedException e) {
-							Thread.currentThread().interrupt();
-						}
-					}
-				}
-		).join();
+		synchronized (monitor) {
+			try {
+				Thread.sleep(1);
+			}
+			catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		}
 	}
 }

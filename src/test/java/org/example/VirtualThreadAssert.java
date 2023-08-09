@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicReference;
 
 import jdk.jfr.Configuration;
 import jdk.jfr.consumer.RecordedEvent;
@@ -40,7 +41,10 @@ class VirtualThreadAssert extends AbstractAssert<VirtualThreadAssert, ThrowingRu
 			// See https://openjdk.org/jeps/425#JDK-Flight-Recorder-JFR
 			rs.onEvent("jdk.VirtualThreadPinned", events::add);
 			rs.startAsync();
-			actual.run();
+			Exception exception = startVirtualThread(actual);
+			if (exception != null) {
+				throw exception;
+			}
 			rs.stop();
 		}
 		if (!events.isEmpty()) {
@@ -51,6 +55,24 @@ class VirtualThreadAssert extends AbstractAssert<VirtualThreadAssert, ThrowingRu
 			}
 			failWithMessage("Expected no pinning to happen, but found pinning:%n%s", details);
 		}
+	}
+
+	private Exception startVirtualThread(ThrowingRunnable runnable) {
+		AtomicReference<Exception> thrown = new AtomicReference<>();
+		try {
+			Thread.ofVirtual().name("test-subject").start(() -> {
+				try {
+					runnable.run();
+				}
+				catch (Exception ex) {
+					thrown.set(ex);
+				}
+			}).join();
+		}
+		catch (InterruptedException ex) {
+			failWithMessage("Got interrupted while waiting for virtual thread");
+		}
+		return thrown.get();
 	}
 
 	private static Configuration getOrCreateJfrConfiguration() {
