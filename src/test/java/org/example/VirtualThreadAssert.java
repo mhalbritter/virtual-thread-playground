@@ -73,6 +73,7 @@ class VirtualThreadAssert extends AbstractAssert<VirtualThreadAssert, ThrowingRu
 		catch (InterruptedException ex) {
 			failWithMessage("Got interrupted while waiting for virtual thread");
 		}
+		throw new AssertionError("Unreachable");
 	}
 
 	private static Configuration getOrCreateJfrConfiguration() {
